@@ -1,0 +1,31 @@
+# 모델 체크포인트 / 가중치 (수 GB — 절대 커밋 금지)
+ckpt/
+checkpoints/
+*.pth
+*.safetensors
+*.bin
+*.gguf
+
+# 실험 로그 / 결과
+logs/
+outputs/
+*.log
+wandb/
+
+# 데이터셋 캐시
+data/
+.cache/
+*.arrow
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# OS / 에디터
+.DS_Store
+.vscode/
+.idea/
