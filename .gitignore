@@ -1,10 +1,27 @@
 # 모델 체크포인트 / 가중치 (수 GB — 절대 커밋 금지)
 ckpt/
 checkpoints/
+models/
 *.pth
 *.safetensors
 *.bin
 *.gguf
+
+# 클론한 LayerSkip 코드베이스: 업스트림 전체는 무시하되, QuantShift가 수정하는 파일만 추적.
+# (주의: .gitignore는 줄 끝 인라인 주석 불가 — 주석은 반드시 별도 줄.)
+# (git 규칙: 부모 디렉토리를 통째 무시하면 내부 파일 재포함 불가 → "내용(*) 무시 + 개별 재포함" 패턴.)
+/LayerSkip/*
+# 양자화 주입 + setup() 단일GPU 패치
+!/LayerSkip/generate.py
+# quantize/quant_double/compute_dtype 플래그
+!/LayerSkip/arguments.py
+# 하위 디렉토리 재포함 후 그 내용 무시 → 개별 파일만 재포함
+!/LayerSkip/self_speculation/
+/LayerSkip/self_speculation/*
+# (예정) shadow-token 후킹 + D(E)
+!/LayerSkip/self_speculation/llama_model_utils.py
+# (예정) shadow acceptance + 거부토큰 로깅
+!/LayerSkip/self_speculation/self_speculation_generator.py
 
 # 실험 로그 / 결과
 logs/
@@ -25,7 +42,8 @@ __pycache__/
 venv/
 env/
 
-# OS / 에디터
+# OS / 에디터 / 로컬 하니스 상태
 .DS_Store
 .vscode/
 .idea/
+.claude/
