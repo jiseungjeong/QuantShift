@@ -39,8 +39,9 @@ class GenerateArguments:
     streamer: StreamerType = StreamerType.STANDARD
 
 def setup(args: Arguments, device: str = "cuda"):
-    # QuantShift: 단일 GPU에서는 분산 초기화 생략 (torchrun 없이 `python benchmark.py`로 실행).
-    # 분산 PG가 켜지면 transformers 4.50이 device_map="auto"를 텐서병렬로 해석 → torch>=2.5 요구 에러.
+    # QuantShift: skip distributed init on a single GPU (run via `python benchmark.py`, no torchrun).
+    # An initialized process group makes transformers interpret device_map="auto" as tensor-parallel
+    # (which requires torch>=2.5 and errors out).
     world_size = int(os.environ.get("WORLD_SIZE", "1"))
     if world_size > 1:
         backend_str = "cpu:gloo" if "cpu" in device else "cuda:nccl,cpu:gloo"
@@ -63,7 +64,7 @@ def load_model_and_tokenizer(args: Arguments, device: str = "auto"):
     # initialize model
     tokenizer = transformers.AutoTokenizer.from_pretrained(local_model_path)
 
-    # --- QuantShift: 양자화 주입 (§2). args.quantize 없으면 기존 fp16 동작 유지 ---
+    # --- QuantShift: quantization injection (§2). Falls back to the original fp16 path if args.quantize is None ---
     load_kwargs = dict(use_safetensors=True, device_map="auto")
     quantize = getattr(args, "quantize", None)
     if quantize == "nf4":
@@ -77,7 +78,7 @@ def load_model_and_tokenizer(args: Arguments, device: str = "auto"):
     elif quantize == "int8":
         load_kwargs["quantization_config"] = transformers.BitsAndBytesConfig(load_in_8bit=True)
     else:
-        # 기본(B1/B2): 비양자화 fp16
+        # default (B1/B2): non-quantized fp16
         load_kwargs["torch_dtype"] = torch.float16
 
     model = transformers.AutoModelForCausalLM.from_pretrained(local_model_path, **load_kwargs)

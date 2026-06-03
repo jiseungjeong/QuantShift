@@ -22,10 +22,10 @@ class Arguments:
     model_args: Optional[str] = None
     seed: Optional[int] = 42
     output_dir: str = "./logs"
-    # --- QuantShift: 양자화 주입 플래그 (§2) ---
-    quantize: Optional[str] = None      # None(bf16/fp16) | "nf4" | "int8"
+    # --- QuantShift: quantization injection flags (§2) ---
+    quantize: Optional[str] = None      # None (fp16) | "nf4" | "int8"
     quant_double: bool = True           # nf4 double quantization (bnb_4bit_use_double_quant)
-    compute_dtype: str = "bfloat16"     # 4bit weight의 활성화 연산 dtype (bfloat16/float16)
+    compute_dtype: str = "bfloat16"     # activation compute dtype for 4bit weights (bfloat16/float16)
 
 
 # Source: https://github.com/EleutherAI/lm-evaluation-harness/blob/a9eaaf46f1e246e5ce090e37f2f99fe1cfe5a919/lm_eval/utils.py

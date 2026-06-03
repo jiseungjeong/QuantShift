@@ -389,3 +389,56 @@ def forward_remainder(
     return ForwardResult(
         logits=logits, past_key_values=past_key_values, exit_query_cache=exit_query_cache
     )
+
+
+# ============================================================================
+# QuantShift §5.2/5.5: shadow-token collection
+# ----------------------------------------------------------------------------
+# In a single full forward, extract for every layer the "next token that layer would have drafted"
+# (the shadow prediction). Passing each layer's hidden state through the shared norm (model.model.norm)
+# and shared LM head (model.lm_head) yields that layer's early-exit prediction (meaningful because
+# LayerSkip is trained for early exit). This is what lets us estimate the per-layer acceptance
+# landscape in one pass, with no full E sweep.
+#
+# Returns: LongTensor [num_layers, seq] -- preds[i, t] = next-token id predicted by layer (i+1) at position t.
+#   - prediction of exit layer E (1-based) = preds[E-1]
+#   - last row preds[-1] = full-model (layer L) prediction = the self-SD verify target
+#   - p_hat(E) = mean_t( preds[E-1, t] == preds[-1, t] )   (per-token acceptance estimate)
+#   - D(E)     = disagreement rate of preds[E-1] between two precisions on the same sequence (§5.5)
+# Memory: build logits[b,seq,vocab] per layer, argmax, then discard (one layer at a time).
+# ============================================================================
+@torch.inference_mode()
+def collect_layer_predictions(
+    model: transformers.LlamaForCausalLM,
+    input_ids: torch.Tensor,
+) -> torch.Tensor:
+    device = input_ids.device
+    batch_size, seq_length = input_ids.shape
+
+    past_key_values = transformers.cache_utils.DynamicCache.from_legacy_cache(None)
+    position_ids = torch.arange(0, seq_length, dtype=torch.long, device=device)
+    position_ids = position_ids.unsqueeze(0).view(-1, seq_length)
+    attention_mask = input_ids.new_ones((batch_size, seq_length), dtype=torch.bool)
+    inputs_embeds = model.model.embed_tokens(input_ids)
+    attention_mask = _prepare_decoder_attention_mask(
+        model, attention_mask, (batch_size, seq_length), inputs_embeds, 0
+    )
+
+    hidden_states = inputs_embeds
+    preds = []
+    for decoder_layer in model.model.layers:
+        hidden_states, past_key_values = decoder_layer(
+            hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_value=past_key_values,
+            output_attentions=False,
+            use_cache=True,
+            padding_mask=None,
+        )
+        normed = model.model.norm(hidden_states)
+        logits = model.lm_head(normed)            # [b, seq, vocab]
+        preds.append(logits.argmax(dim=-1))       # [b, seq]
+        del normed, logits
+
+    return torch.stack(preds, dim=0)[:, 0, :]      # [num_layers, seq] (batch 0)

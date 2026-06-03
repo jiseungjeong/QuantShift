@@ -1,12 +1,13 @@
-"""QuantShift 샘플 수 파일럿 (§0-6, §4).
+"""QuantShift sample-size pilot (§0-6, §4).
 
-같은 HumanEval 프롬프트 집합에 대해 self-SD(E=8)를 full precision(fp16)과 4bit(nf4)로 각각 돌려
-per-sample acceptance를 모으고, 페어 Δα = α_fp16 − α_4bit 의 표준편차로 CI폭<0.05 만족 최소 n을 계산한다.
+For the same set of HumanEval prompts, run self-SD (E=8) at full precision (fp16) and 4bit (nf4),
+collect per-sample acceptance, and from the std of the paired Delta-alpha = alpha_fp16 - alpha_4bit
+compute the minimum n that yields a 95% CI width < 0.05.
 
-실행:
+Run:
   cd LayerSkip && conda run -n NLP env PYTHONNOUSERSITE=1 PYTHONPATH=$PWD \
       python ../pilot_sample_size.py
-부수효과: full precision 7B(~14GB) OOM 여부도 확인된다(B1/B2 사전점검).
+Side effect: also checks whether the full-precision 7B (~14GB) OOMs (B1/B2 pre-check).
 """
 import gc, json, math, os, statistics, time
 import torch
@@ -68,11 +69,11 @@ def main():
                         n_shot=0, seed=SEED, data_path=None, template=None)
     print(f"loaded {len(examples)} {DATASET} prompts", flush=True)
 
-    # full precision first (큰 모델 → OOM 확인 겸), 그다음 4bit
+    # full precision first (also the OOM check), then 4bit
     acc_fp = run_precision("fp16", None, examples)
     acc_q = run_precision("nf4", "nf4", examples)
 
-    # paired Δα (둘 다 valid인 샘플만)
+    # paired Delta-alpha (only samples valid in both)
     deltas, a_fp, a_q = [], [], []
     for x, y in zip(acc_fp, acc_q):
         if x is not None and y is not None:
@@ -81,7 +82,7 @@ def main():
     n_valid = len(deltas)
     sd_delta = statistics.stdev(deltas) if n_valid > 1 else float("nan")
     mean_delta = statistics.mean(deltas) if deltas else float("nan")
-    # CI 총폭 < 0.05 → 반폭 0.025, z=1.96
+    # CI total width < 0.05 -> half-width 0.025, z=1.96
     z, halfwidth = 1.96, 0.025
     n_req = math.ceil((z * sd_delta / halfwidth) ** 2) if sd_delta == sd_delta else None
 
@@ -102,8 +103,8 @@ def main():
     print("\n==================== PILOT SUMMARY ====================", flush=True)
     print(f"valid pairs           : {n_valid}/{N}", flush=True)
     print(f"mean acc  fp16 / nf4  : {summary['mean_acc_fp16']:.4f} / {summary['mean_acc_nf4']:.4f}", flush=True)
-    print(f"mean Δα (fp16 − nf4)  : {mean_delta:+.4f}", flush=True)
-    print(f"std  Δα (per-sample)  : {sd_delta:.4f}", flush=True)
+    print(f"mean delta (fp16-nf4) : {mean_delta:+.4f}", flush=True)
+    print(f"std  delta (per-sample): {sd_delta:.4f}", flush=True)
     print(f"required n (CI<0.05)  : {n_req}", flush=True)
     print(f"saved -> {os.path.join(OUT, 'pilot_results.json')}", flush=True)
     print("=======================================================", flush=True)
