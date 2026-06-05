@@ -69,6 +69,8 @@ def main():
                     help="reference sequence .pt (generated+saved by this model if missing; else loaded for teacher-forcing)")
     ap.add_argument("--cross-val-E", type=str, default="",
                     help="comma-separated E list (compare with real self-SD). Empty = skip.")
+    ap.add_argument("--save-margin", action="store_true",
+                    help="also store per-layer top1-top2 logit margin in preds (for §6.1 margin<->D(E))")
     ap.add_argument("--out-dir", type=str, default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "shadow"))
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
@@ -117,7 +119,10 @@ def main():
     for i, r in enumerate(refs):
         ids = torch.tensor([r["ids"]], device=model.device)
         plen, S = r["prompt_len"], len(r["ids"])
-        preds = collect_layer_predictions(model, ids)        # [L, S]
+        if args.save_margin:
+            preds, marg = collect_layer_predictions(model, ids, return_margin=True)  # [L,S],[L,S]
+        else:
+            preds = collect_layer_predictions(model, ids); marg = None
         verify = preds[-1]                                   # layer-L prediction
         lo, hi = plen - 1, S - 1                              # generated-region positions t: [plen-1, S-2]
         if hi <= lo:
@@ -128,8 +133,10 @@ def main():
         pmatch = (preds[:, reg] == verify[reg].unsqueeze(0))  # [L, Lg] bool
         p_curves.append(pmatch.float().mean(dim=1).tolist())  # per-token p_hat(E)
         acc_curves.append([block_accept_rate(pmatch[l].tolist(), NUM_SPEC) for l in range(pmatch.shape[0])])
-        saved_preds.append({"prompt_len": plen, "ids": r["ids"],
-                            "preds": preds.to(torch.int16).cpu()})
+        entry = {"prompt_len": plen, "ids": r["ids"], "preds": preds.to(torch.int16).cpu()}
+        if marg is not None:
+            entry["margin"] = marg.to(torch.float16).cpu()    # [L, S] top1-top2 logit gap
+        saved_preds.append(entry)
         if (i + 1) % 10 == 0:
             print(f"[shadow] {i+1}/{len(refs)} | {time.time()-t1:.0f}s", flush=True)
 

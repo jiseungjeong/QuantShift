@@ -411,7 +411,10 @@ def forward_remainder(
 def collect_layer_predictions(
     model: transformers.LlamaForCausalLM,
     input_ids: torch.Tensor,
-) -> torch.Tensor:
+    return_margin: bool = False,
+):
+    """Return per-layer argmax [num_layers, seq]. If return_margin, also return the per-layer
+    top1-top2 logit gap [num_layers, seq] (small gap = a close call = easily flipped by quant noise; §6.1)."""
     device = input_ids.device
     batch_size, seq_length = input_ids.shape
 
@@ -425,7 +428,7 @@ def collect_layer_predictions(
     )
 
     hidden_states = inputs_embeds
-    preds = []
+    preds, margins = [], []
     for decoder_layer in model.model.layers:
         hidden_states, past_key_values = decoder_layer(
             hidden_states,
@@ -439,6 +442,13 @@ def collect_layer_predictions(
         normed = model.model.norm(hidden_states)
         logits = model.lm_head(normed)            # [b, seq, vocab]
         preds.append(logits.argmax(dim=-1))       # [b, seq]
+        if return_margin:
+            top2 = logits.topk(2, dim=-1).values  # [b, seq, 2]
+            margins.append((top2[..., 0] - top2[..., 1]).float())  # [b, seq]
         del normed, logits
 
-    return torch.stack(preds, dim=0)[:, 0, :]      # [num_layers, seq] (batch 0)
+    pred = torch.stack(preds, dim=0)[:, 0, :]      # [num_layers, seq] (batch 0)
+    if return_margin:
+        marg = torch.stack(margins, dim=0)[:, 0, :]
+        return pred, marg
+    return pred
