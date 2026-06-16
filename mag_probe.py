@@ -1,8 +1,8 @@
-"""QuantShift §8.4 (appendix): MAG (Margin-Adaptive gamma) preliminary probe -- OFFLINE, GPU 0.
+"""MAG (Margin-Adaptive gamma) preliminary probe (offline).
 
 Idea: in the draft phase, watch each draft token's top1-top2 margin; if margin < tau_m, STOP the draft
 block at that position (don't propose the rest). Cutting near-boundary draft tokens (where 4bit flips
-concentrate, §6.1: flip-margin 9.3x smaller) saves wasted dequant work -> directly attacks nf4's A<1.
+concentrate, flip-margin 9.3x smaller) saves wasted dequant work -> directly attacks nf4's A<1.
 Greedy verify is unchanged -> output is bit-identical, only speed changes (consistent with Delta-alpha~=0).
 
 This is an OFFLINE simulation on the saved shadow preds+margin (no GPU). It reconstructs, for a fixed
@@ -30,8 +30,6 @@ IMPORTANT CAVEATS (printed in output, mirrored in plan.md):
   (2) A is a COST-MODEL ESTIMATE (r back-solved); the l_bar<->draft_steps trade-off is real but the exact
       wall-clock needs the measured probe. Do not report A as measured.
   (3) cutting draft also lowers l_bar -- the "A<1 -> A>1" flip is NOT guaranteed; that's what we test.
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python mag_probe.py
 """
 import json, os, statistics
 import numpy as np

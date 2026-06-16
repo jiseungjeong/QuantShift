@@ -1,4 +1,4 @@
-"""QuantShift §4 baselines B1-B6: speed (wall-clock) + quality + memory, with latency breakdown.
+"""Baselines B1-B6: speed (wall-clock) + quality + memory, with latency breakdown.
 
 For ONE precision (fp16/nf4/int8) this runs both strategies x both datasets:
   - strategy: autoregressive (B1/B3/B5) and self_speculative E=8,gamma=6 (B2/B4/B6)
@@ -10,10 +10,6 @@ Quality notes:
   - HumanEval pass@1: LayerSkip data.py drops test cases, so we load `openai_humaneval` directly
     (prompt/test/entry_point), generate the completion, then exec(prompt+completion+test) under a timeout.
   - CNN/DM ROUGE-2 via torchmetrics, vs reference highlights.
-
-Run (one precision):
-  cd LayerSkip && conda run -n NLP env PYTHONNOUSERSITE=1 PYTHONPATH=$PWD \
-    python ../baseline_eval.py --precision fp16 --num 100 --max-steps 128
 """
 import argparse, json, os, signal, statistics, time
 import torch
@@ -25,7 +21,7 @@ from self_speculation.generator_base import GenerationConfig, HuggingfaceLlamaGe
 from self_speculation.autoregressive_generator import AutoRegressiveGenerationStrategy
 from self_speculation.self_speculation_generator import SelfSpeculativeGenerationStrategy
 
-MODEL = os.path.expanduser("~/models/layerskip-llama2-7B")
+MODEL = os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B"))
 SEED = 42
 EXIT_LAYER = 8
 NUM_SPEC = 6

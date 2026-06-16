@@ -1,17 +1,15 @@
-"""QuantShift §5.4/5.5/§7: compute Delta-alpha / D(E) / precision trend from saved shadow preds,
+"""Compute Delta-alpha / D(E) / precision trend from saved shadow preds,
 run the pre-registered judgement, and plot.
 
 Prerequisite: run shadow_landscape.py for fp16/nf4/int8 each with the SAME ref_common.pt, so that
 `logs/shadow/preds_{precision}.pt` exist (paired on identical sequences). Each entry: {prompt_len, ids, preds[L,S] int16}.
 
-Metrics (locked decisions, §5.1):
+Metrics (locked decisions):
   - alpha = p_hat(E) per-token match prob (= layer-E argmax == layer-L argmax, averaged over generated region)
   - delta_alpha_q(E) = p_hat_fp16(E) - p_hat_q(E)   (paired, per-sample -> 95% CI)
   - D_q(E)          = mean_t[ preds_fp16[E,t] != preds_q[E,t] ]  (top-1 disagreement, common sequence)
-Pre-registration (§7.1, p_hat-based): (a) Delta-alpha>0.1 & 95%CI excludes 0 over >= half the layers ;
-                                      (b) mean Delta-alpha(E<=8) - mean Delta-alpha(E>=16) >= 0.05.
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python analyze_landscape.py
+Pre-registration (p_hat-based): (a) Delta-alpha>0.1 & 95%CI excludes 0 over >= half the layers ;
+                                (b) mean Delta-alpha(E<=8) - mean Delta-alpha(E>=16) >= 0.05.
 """
 import argparse, json, os, math
 import torch
@@ -115,7 +113,7 @@ def main():
 
     Es = np.arange(1, L + 1)
 
-    # ---- pre-registration judgement (§7.1, p_hat-based, 4bit=nf4) ----
+    # ---- pre-registration judgement (p_hat-based, 4bit=nf4) ----
     nf4d = delta["nf4"]["mean"]; nf4ci = delta["nf4"]["ci"]
     sig = (nf4d > 0.1) & ((nf4d - nf4ci) > 0)          # Delta-alpha>0.1 & CI lower bound > 0
     frac_sig = sig[:L - 1].mean()                       # exclude E=L
@@ -132,28 +130,28 @@ def main():
     # 1) acceptance curves
     plt.figure(figsize=(7, 4.5))
     for p, c in [(REF, "k"), ("int8", "C0"), ("nf4", "C3")]:
-        plt.plot(Es, p_hat[p], marker=".", label=f"{p} p_hat(E)", color=c)
-    plt.xlabel("exit layer E"); plt.ylabel("p_hat(E) per-token acceptance"); plt.legend(); plt.grid(alpha=.3)
-    plt.title(f"Per-layer acceptance ({TAG}, shadow)"); plt.tight_layout()
+        plt.plot(Es, p_hat[p], marker=".", label=rf"$\hat{{p}}(E)$  {p}", color=c)
+    plt.xlabel("exit layer $E$"); plt.ylabel(r"$\hat{p}(E)$  per-token acceptance"); plt.legend(); plt.grid(alpha=.3)
+    plt.tight_layout()
     plt.savefig(os.path.join(FIG_DIR, "acceptance_curves.png"), dpi=130); plt.close()
 
     # 2) delta_alpha(E) + CI
     plt.figure(figsize=(7, 4.5))
     for q, c in [("int8", "C0"), ("nf4", "C3")]:
         m, h = delta[q]["mean"], delta[q]["ci"]
-        plt.plot(Es, m, marker=".", label=f"delta_alpha {q}", color=c)
+        plt.plot(Es, m, marker=".", label=rf"$\Delta\alpha(E)$  {q}", color=c)
         plt.fill_between(Es, m - h, m + h, alpha=.2, color=c)
     plt.axhline(0, color="gray", lw=.8); plt.axhline(0.1, color="r", ls="--", lw=.8, label="threshold 0.1")
-    plt.xlabel("exit layer E"); plt.ylabel("delta_alpha(E) = p_hat_fp16 - p_hat_q"); plt.legend(); plt.grid(alpha=.3)
-    plt.title(f"Acceptance erosion by precision ({TAG})"); plt.tight_layout()
+    plt.xlabel("exit layer $E$"); plt.ylabel(r"$\Delta\alpha(E)=\hat{p}_{\mathrm{fp16}}(E)-\hat{p}_{q}(E)$"); plt.legend(); plt.grid(alpha=.3)
+    plt.tight_layout()
     plt.savefig(os.path.join(FIG_DIR, "delta_alpha.png"), dpi=130); plt.close()
 
     # 3) D(E)
     plt.figure(figsize=(7, 4.5))
     for q, c in [("int8", "C0"), ("nf4", "C3")]:
-        plt.plot(Es, Dcurve[q], marker=".", label=f"D(E) {q}", color=c)
-    plt.xlabel("exit layer E"); plt.ylabel("D(E) top-1 disagreement (vs fp16)"); plt.legend(); plt.grid(alpha=.3)
-    plt.title(f"Per-layer quantization perturbation D(E) ({TAG})"); plt.tight_layout()
+        plt.plot(Es, Dcurve[q], marker=".", label=rf"$D(E)$  {q}", color=c)
+    plt.xlabel("exit layer $E$"); plt.ylabel(r"$D(E)$  top-1 disagreement (vs fp16)"); plt.legend(); plt.grid(alpha=.3)
+    plt.tight_layout()
     plt.savefig(os.path.join(FIG_DIR, "divergence.png"), dpi=130); plt.close()
 
     # ---- summary save/print ----

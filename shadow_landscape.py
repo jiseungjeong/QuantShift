@@ -1,19 +1,14 @@
-"""QuantShift §5: shadow-token landscape collection + cross-validation gate.
+"""Shadow-token landscape collection + cross-validation gate.
 
 For one precision (fp16/nf4/int8):
   1) teacher-force a reference sequence (common, --ref-file) through collect_layer_predictions
      to gather per-layer shadow predictions
   2) p_hat(E) = mean_t( layer-E prediction == layer-L prediction ) -> per-layer acceptance landscape
-  3) save preds (.pt) -> later D(E) (cross-precision disagreement, §5.5)
+  3) save preds (.pt) -> later D(E) (cross-precision disagreement)
   4) (--cross-val-E) compare with real self-SD acceptance -> cross-validation gate (PASS if |delta|<0.05)
 
 Reference sequence: if --ref-file exists, load it (same sequence across precisions -> paired Delta-alpha / D(E));
 otherwise greedy-generate with this model and save.
-
-Run:
-  cd LayerSkip && conda run -n NLP env PYTHONNOUSERSITE=1 PYTHONPATH=$PWD \
-    python ../shadow_landscape.py --precision fp16 --num 30 --gen-tokens 64 \
-      --ref-file ../logs/shadow/ref.pt --cross-val-E 4,8,12,16
 """
 import argparse, json, os, statistics, time
 import torch
@@ -25,7 +20,7 @@ from self_speculation.generator_base import GenerationConfig, HuggingfaceLlamaGe
 from self_speculation.self_speculation_generator import SelfSpeculativeGenerationStrategy
 from self_speculation.llama_model_utils import collect_layer_predictions
 
-MODEL = os.path.expanduser("~/models/layerskip-llama2-7B")
+MODEL = os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B"))
 SEED = 42
 NUM_SPEC = 6
 DEFAULT_NSHOT = {"cnn_dm_summarization": 1, "xsum_summarization": 0, "human_eval": 0}
@@ -70,7 +65,7 @@ def main():
     ap.add_argument("--cross-val-E", type=str, default="",
                     help="comma-separated E list (compare with real self-SD). Empty = skip.")
     ap.add_argument("--save-margin", action="store_true",
-                    help="also store per-layer top1-top2 logit margin in preds (for §6.1 margin<->D(E))")
+                    help="also store per-layer top1-top2 logit margin in preds (for margin<->D(E))")
     ap.add_argument("--out-dir", type=str, default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "shadow"))
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)

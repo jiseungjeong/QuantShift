@@ -1,4 +1,4 @@
-"""QuantShift §8.4 (appendix): AED (Adaptive Exit Depth) preliminary probe -- OFFLINE, GPU 0.
+"""AED (Adaptive Exit Depth) preliminary probe (offline).
 
 Idea: draft's exit layer E is per-token adaptive, not fixed at 8. Easy positions (high margin at a
 shallow layer) exit early (E small); hard positions go deeper. Two levers at once:
@@ -29,8 +29,6 @@ ORACLE UPPER BOUND: each token uses the shallowest E whose prediction ALREADY ==
 PRE-REGISTERED GATE (locked 2026-06-06, same as MAG -> comparable):
   PROCEED to a real measured probe ONLY IF some tau pushes nf4 A > 1.0 (and oracle A > 1.0 first).
   Scope nf4 x {human_eval, cnn_dm}. Otherwise -> future-work text (zero loss).
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python aed_probe.py
 """
 import json, os
 import numpy as np

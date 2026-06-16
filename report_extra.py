@@ -1,4 +1,4 @@
-"""QuantShift §8.3 extra report artifacts from saved preds/margin (GPU 0).
+"""Extra report artifacts from saved preds/margin.
 
 (gamma) gamma-axis break-even: per-position match reconstructed from preds (preds[E]==preds[L]);
         block_accept_rate for gamma in {2,4,6,8} -> acceptance & l_bar per gamma.
@@ -6,8 +6,6 @@
         (c_draft ~ proportional to gamma), not measured. Clearly labeled.
 (H) D(E) x token-category heatmap: layer x category disagreement (HumanEval code categories).
 (M) margin quantile curve: P(flip | fp16 margin <= x) at E=4 (early) and all-layer pooled.
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python report_extra.py
 """
 import json, os, statistics
 import numpy as np
@@ -76,7 +74,7 @@ def code_cat(s):
 
 def heatmap():
     from transformers import AutoTokenizer
-    tk = AutoTokenizer.from_pretrained(os.path.expanduser("~/models/layerskip-llama2-7B"))
+    tk = AutoTokenizer.from_pretrained(os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B")))
     fp = torch.load(os.path.join(SH, "preds_fp16.pt"))
     q = torch.load(os.path.join(SH, "preds_nf4.pt"))
     cats = ["keyword", "identifier", "literal", "operator", "other"]

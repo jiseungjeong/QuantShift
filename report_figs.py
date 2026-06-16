@@ -1,11 +1,9 @@
-"""QuantShift report artifacts (§8.2): precision-trend figure + break-even 6-cell table
+"""Report artifacts: precision-trend figure + break-even 6-cell table
 + 2x2 related-work table + pre-registration CI table. All from saved JSONs (no extra measurement).
 
 Outputs:
   logs/report/precision_trend.png   - D(E<=8) vs precision (fp16->8bit->4bit), code & summary lines
   logs/report/tables.md             - markdown tables to paste into the report
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python report_figs.py
 """
 import json, os, statistics
 import matplotlib

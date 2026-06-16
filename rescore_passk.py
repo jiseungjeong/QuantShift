@@ -1,10 +1,8 @@
-"""QuantShift §4 fix: recompute HumanEval pass@1 after the indentation-decode fix.
+"""Recompute HumanEval pass@1 after the indentation-decode fix.
 
 Only AR is needed: with greedy decoding, self-SD output is identical to AR output at the same
 precision (self-SD verifies/falls back to the full model's greedy token), so pass@1(self-SD)=pass@1(AR).
 Saves completions + per-problem pass so re-scoring later is free.
-
-Run: cd LayerSkip && conda run -n NLP env PYTHONNOUSERSITE=1 PYTHONPATH=$PWD python ../rescore_passk.py --num 100
 """
 import argparse, json, os, time
 import torch
@@ -15,7 +13,7 @@ from self_speculation.autoregressive_generator import AutoRegressiveGenerationSt
 from datasets import load_dataset
 from baseline_eval import run_passk_problem, fix_indent, truncate_completion
 
-MODEL = os.path.expanduser("~/models/layerskip-llama2-7B")
+MODEL = os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B"))
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "baselines")
 
 

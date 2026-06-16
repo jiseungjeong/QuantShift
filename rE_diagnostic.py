@@ -1,4 +1,4 @@
-"""QuantShift AED go/no-go diagnostic: measure r(E) = c_draft(E)/c_verify on the REAL self-SD path.
+"""AED go/no-go diagnostic: measure r(E) = c_draft(E)/c_verify on the REAL self-SD path.
 
 AED (Adaptive Exit Depth) bets that lowering draft exit layer E reduces draft cost ~proportionally
 (c_draft ~ E layers), so per-token depth tuning shrinks r and pushes A>1. But in the actual LayerSkip
@@ -13,8 +13,6 @@ This times, for nf4 on a real prompt with a real KV cache (mirroring single_step
   - r(E) = (c_draft(E)/gamma) / c_verify   [per-draft-token cost vs one verify call]
 Decision: if r(E) scales ~linearly with E (r(4) << r(8)) -> AED viable, proceed. If r(E) ~flat
 (r(4) ~= r(8)) -> draft cost is launch/bandwidth-bound, AED's depth lever is weak -> kill, report.
-
-Run: cd LayerSkip && conda run -n NLP env PYTHONNOUSERSITE=1 PYTHONPATH=$PWD python ../rE_diagnostic.py
 """
 import os, time, json
 import torch
@@ -24,7 +22,7 @@ from generate import load_model_and_tokenizer
 from data import get_data
 from self_speculation.llama_model_utils import forward_early, forward_remainder
 
-MODEL = os.path.expanduser("~/models/layerskip-llama2-7B")
+MODEL = os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B"))
 SEED = 42
 GAMMA = 6
 E_LIST = [2, 4, 6, 8, 12, 16]

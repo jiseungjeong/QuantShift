@@ -1,4 +1,4 @@
-"""QuantShift §6: per-token-category breakdown of D(E) + margin<->D(E) correlation.
+"""Per-token-category breakdown of D(E) + margin<->D(E) correlation.
 
 Uses saved shadow preds (paired on a common fp16 reference):
   - D(E) per token category: for each generated position, label the *target token* by category, then
@@ -6,11 +6,7 @@ Uses saved shadow preds (paired on a common fp16 reference):
     HumanEval (code): python tokenize -> keyword / identifier / operator / literal / other.
     CNN/DM (summary): spaCy POS -> function-word (DET/ADP/CCONJ/PRON/AUX/PART/SCONJ) vs content-word (NOUN/VERB/ADJ/PROPN/NUM/ADV).
   - margin<->D(E): if preds_fp16 has 'margin' (top1-top2 logit gap), show that small fp16 margin
-    correlates with high D(E) at the same (layer, position) = "close call -> flipped by quant noise" (§6.1).
-
-Run:
-  conda run -n NLP env PYTHONNOUSERSITE=1 python analyze_tokencat.py --shadow-dir logs/shadow --tag HumanEval --kind code
-  conda run -n NLP env PYTHONNOUSERSITE=1 python analyze_tokencat.py --shadow-dir logs/shadow/cnn_dm --tag CNN-DM --kind pos
+    correlates with high D(E) at the same (layer, position) = "close call -> flipped by quant noise".
 """
 import argparse, io, json, os, tokenize as pytok
 import numpy as np
@@ -56,7 +52,7 @@ def main():
 
     # tokenizer to map ids -> token strings (for labeling target tokens)
     from transformers import AutoTokenizer
-    tk = AutoTokenizer.from_pretrained(os.path.expanduser("~/models/layerskip-llama2-7B"))
+    tk = AutoTokenizer.from_pretrained(os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B")))
     nlp = None
     if args.kind == "pos":
         import spacy
@@ -100,7 +96,7 @@ def main():
                 (margin_flip if pf[E_probe, t] != pq[E_probe, t] else margin_same).append(float(marg[E_probe, t]))
 
     # ---- print D(E) by category (early E<=8 mean) ----
-    print(f"\n==================== §6 D(E) by token category — {args.tag} (4bit vs fp16) ====================")
+    print(f"\n==================== D(E) by token category — {args.tag} (4bit vs fp16) ====================")
     print(f"{'category':12} {'n':>7} {'D(E<=8)':>9} {'D(E>=16)':>9} {'D(all)':>8}")
     rows = []
     for cat, v in sorted(cats.items(), key=lambda x: -x[1]["n"]):

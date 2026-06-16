@@ -1,11 +1,9 @@
-"""QuantShift §4/§7.2: aggregate baseline JSONs into the B1-B6 table + speedup + latency story.
+"""Aggregate baseline JSONs into the B1-B6 table + speedup + latency story.
 
 Reads logs/baselines/baseline_{fp16,nf4,int8}.json (from baseline_eval.py) and prints:
   - B1-B6 table: tokens/s, speedup vs B1 (same dataset), quality, VRAM, disk, load time
   - latency breakdown WITHOUT a profiler: delta(time/token) between precisions at matched (strategy,dataset)
     = the de-quantization tax per token (same FLOPs, only difference is dequant/unpack).
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python aggregate_baselines.py
 """
 import json, os
 
@@ -49,7 +47,7 @@ def main():
         print(f"[err] no baseline_*.json in {BDIR}"); return
 
     for dataset in ["human_eval", "cnn_dm"]:
-        print(f"\n==================== §4 BASELINES — {dataset} ====================")
+        print(f"\n==================== BASELINES — {dataset} ====================")
         # B1 (AR fp16) tokens/s as 1.00x reference for this dataset
         ref = d.get("fp16", {}).get("configs", {}).get(f"ar/{dataset}", {}).get("tokens_per_sec_mean")
         print(f"{'B':3} {'config':16} {'tok/s':>10} {'speedup':>8} {'quality':>16} {'acc':>6} {'VRAM':>6} {'disk':>6}")

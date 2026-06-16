@@ -1,4 +1,4 @@
-"""QuantShift §7.4: break-even analysis for quantized self-SD (no extra measurement).
+"""Break-even analysis for quantized self-SD (no extra measurement).
 
 Pulls tokens/sec + acceptance from logs/baselines/baseline_{fp16,nf4,int8}.json and reports, per dataset & quant:
   - A = speedup of q-self-SD vs SAME-precision q-AR  (pure speculative gain)
@@ -9,8 +9,6 @@ Pulls tokens/sec + acceptance from logs/baselines/baseline_{fp16,nf4,int8}.json 
 
 Interpretation lever: a faster dequant kernel shrinks `threshold` (toward 1 if q-AR matched fp16-AR);
 even then B>1 needs A>1, i.e. self-SD must actually beat same-precision AR.
-
-Run: conda run -n NLP env PYTHONNOUSERSITE=1 python breakeven.py
 """
 import json, os
 
@@ -44,7 +42,7 @@ def main():
     out = {}
     for dataset in ["human_eval", "cnn_dm"]:
         fp_ar = tps(d, "fp16", "ar", dataset)
-        print(f"\n==================== §7.4 BREAK-EVEN — {dataset} (gamma={GAMMA}) ====================")
+        print(f"\n==================== BREAK-EVEN — {dataset} (gamma={GAMMA}) ====================")
         print(f"fp16-AR baseline: {fp_ar:.1f} tok/s")
         print(f"{'quant':6} {'l_bar':>6} {'A(vs q-AR)':>11} {'threshold':>10} {'B(vs fp16-AR)':>13} {'verdict':>10}")
         for q in ["int8", "nf4"]:

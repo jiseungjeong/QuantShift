@@ -1,12 +1,9 @@
-"""QuantShift sample-size pilot (§0-6, §4).
+"""Sample-size pilot.
 
 For the same set of HumanEval prompts, run self-SD (E=8) at full precision (fp16) and 4bit (nf4),
 collect per-sample acceptance, and from the std of the paired Delta-alpha = alpha_fp16 - alpha_4bit
 compute the minimum n that yields a 95% CI width < 0.05.
 
-Run:
-  cd LayerSkip && conda run -n NLP env PYTHONNOUSERSITE=1 PYTHONPATH=$PWD \
-      python ../pilot_sample_size.py
 Side effect: also checks whether the full-precision 7B (~14GB) OOMs (B1/B2 pre-check).
 """
 import gc, json, math, os, statistics, time
@@ -18,7 +15,7 @@ from data import get_data
 from self_speculation.generator_base import GenerationConfig, HuggingfaceLlamaGenerator
 from self_speculation.self_speculation_generator import SelfSpeculativeGenerationStrategy
 
-MODEL = os.path.expanduser("~/models/layerskip-llama2-7B")
+MODEL = os.environ.get("QUANTSKIP_MODEL", os.path.expanduser("~/models/layerskip-llama2-7B"))
 DATASET = "human_eval"
 N = 100
 EXIT_LAYER = 8
