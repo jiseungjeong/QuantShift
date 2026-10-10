@@ -92,3 +92,9 @@ turns them into metrics, and **figure** scripts render the report PDFs. The cent
 - The cross-precision wall-clock comparison is kernel-dependent (bitsandbytes INT8 decode is
   unusually slow); the per-precision and acceptance results are kernel-independent. See the
   Limitations section of the report.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Files under `LayerSkip/` are from
+[facebookresearch/LayerSkip](https://github.com/facebookresearch/LayerSkip) and remain under
+that project's license.
