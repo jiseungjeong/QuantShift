@@ -2,7 +2,7 @@
 run the pre-registered judgement, and plot.
 
 Prerequisite: run shadow_landscape.py for fp16/nf4/int8 each with the SAME ref_common.pt, so that
-`logs/shadow/preds_{precision}.pt` exist (paired on identical sequences). Each entry: {prompt_len, ids, preds[L,S] int16}.
+`logs/shadow/preds_{precision}.pt` exist (paired on identical sequences). Each entry: {prompt_len, ids, preds[L,S] int32 (older runs: int16)}.
 
 Metrics (locked decisions):
   - alpha = p_hat(E) per-token match prob (= layer-E argmax == layer-L argmax, averaged over generated region)

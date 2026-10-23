@@ -45,8 +45,10 @@ def block_accept_rate(match_bool, gamma):
                 break
         total_prop += len(block)
         total_acc += acc
-        advance = acc + 1 if acc < len(block) else acc   # accepted + verify bonus (on partial accept)
-        pos += max(advance, 1)
+        # LayerSkip always emits one verifier token after the accepted prefix, including when the
+        # whole block is accepted (self_speculation_generator.py: verified_tokens[n_matches]).
+        advance = acc + 1
+        pos += advance
     return total_acc / total_prop if total_prop else float("nan")
 
 
@@ -108,7 +110,7 @@ def main():
     # p_curves: per-token match prob p_hat(E)  (clean token-level signal)
     # acc_curves: block acceptance rate (gamma=NUM_SPEC, comparable with real self-SD)
     p_curves, acc_curves = [], []
-    saved_preds = []         # for D(E): {"prompt_len","ids","preds"(int16 [L, S])}
+    saved_preds = []         # for D(E): {"prompt_len","ids","preds"(int32 [L, S])}
     final_match_check = []   # whether layer-L prediction matches the actual next token (generated region) -- sanity
     t1 = time.time()
     for i, r in enumerate(refs):
@@ -128,7 +130,7 @@ def main():
         pmatch = (preds[:, reg] == verify[reg].unsqueeze(0))  # [L, Lg] bool
         p_curves.append(pmatch.float().mean(dim=1).tolist())  # per-token p_hat(E)
         acc_curves.append([block_accept_rate(pmatch[l].tolist(), NUM_SPEC) for l in range(pmatch.shape[0])])
-        entry = {"prompt_len": plen, "ids": r["ids"], "preds": preds.to(torch.int16).cpu()}
+        entry = {"prompt_len": plen, "ids": r["ids"], "preds": preds.to(torch.int32).cpu()}   # int32: int16 would wrap Llama-3 vocab ids (128k)
         if marg is not None:
             entry["margin"] = marg.to(torch.float16).cpu()    # [L, S] top1-top2 logit gap
         saved_preds.append(entry)
