@@ -28,7 +28,7 @@ def block_accept_rate(match, gamma):
             if x: a += 1
             else: break
         tot += len(blk); acc_t += a
-        pos += max(a + 1 if a < len(blk) else a, 1)
+        pos += a + 1   # accepted prefix + 1 verifier token, also on a fully accepted block
     return acc_t / tot if tot else float("nan")
 
 
